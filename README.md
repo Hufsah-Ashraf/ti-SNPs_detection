@@ -1,6 +1,6 @@
-# tiSNPs Detection
+# tiSNPs (toggling-indicating SNPs) detection
 
-## Pipeline to analyse inversions for recurrence by identifying SNPs discrepant with a single event origin.
+## Pipeline to analyze inversions for recurrence by identifying SNPs discrepant with a single event origin
 
 This workflow uses [Snakemake](https://bitbucket.org/snakemake/snakemake) to execute all steps in order. Before running the pipeline, the file paths should be added to Snakefile.json:
 
