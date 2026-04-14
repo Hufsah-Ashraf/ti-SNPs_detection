@@ -2,11 +2,15 @@
 
 ## Pipeline to analyse inversions for recurrence by identifying SNPs discrepant with a single event origin.
 
-This workflow uses [Snakemake](https://bitbucket.org/snakemake/snakemake) to execute all steps in order. Before running the Snakefile:
+This workflow uses [Snakemake](https://bitbucket.org/snakemake/snakemake) to execute all steps in order. Before running the pipeline, the file paths should be added to Snakefile.json:
 
-  1. the alignmnet (.bam) files should be placed in '.../bam/{{sample}}/all/' and the path should be provided to 'path_to_bams'
-  2. path to bi-allelic SNPs belonging to chr1-chrX should be provided in 'path_to_snps_1toX' and path to bi-allelic SNPs belonging to chrY should be provided in 'path_to_snps_Y'
-  3.  files with background cell state for all samples via [mosaicatcher](https://github.com/friendsofstrandseq/mosaicatcher), (example provided in sample_files/) should be placed as '{path}/{{sample}}/100000_fixed_norm.selected_j0.1_s0.1/final.txt' and path should be added to 'path_to_finals'
-  4.  Inversions belonging to chr1-chrX to be tested should be placed in a bed file (sample provided in sample_files/) 'invs_1toX.bed' and those from chrY in 'invs_Y.bed'
+  1. **path_to_bams**: the folder with alignmnet (.bam) files for each sample. The folder structure should be "path_to_bams/{sample}/{one bam file per cell for this sample}"
+  2. **path_to_snps**: path to the vcf containig bi-allelic SNPs
+  3. **path_to_finals**: files with background cell state for all samples via [mosaicatcher](https://github.com/friendsofstrandseq/mosaicatcher), (example provided in sample_files/). Folder structure should be "path_to_finals/{sample}/{sample}_counts.gz"
+  4. **inversions**: bed file wiht inversions to be tested for recurrence (example provided in sample_files/) 'invs.bed'
+  5. **output_folder**: path to the folder where all the output files should be written
   
-A successful run of the pipeline would generate a file 'one_table_per_snp.txt' which maintains a record of haplotype configuration counts and some other statistics, for each within inversion SNP, a file 'sig_nosig_invs.txt' with recurrence label 'signal' for each inversion depending on the aggregated SNP evidence across the whole locus and a file 'sig_invs.txt' with a subset of the file 'sig_nosig_invs.txt', containing only the inversions where a recurrence signal was observed. 
+A successful run of the pipeline would generate:
+  1. **one_table_per_snp.txt** which maintains, for each within inversion SNP, a record of haplotype configuration counts and some other statistics
+  2. **sig_nosig_invs.txt** with recurrence label (column: signal) for each inversion depending on the aggregated SNP evidence across the whole locus
+  3. **sig_invs.txt** with a subset of the file 'sig_nosig_invs.txt', containing only the inversions where a recurrence signal was observed
