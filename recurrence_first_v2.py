@@ -29,12 +29,14 @@ def counts(input_bam, input_bed,count_output, input_vcf,sample):
         # Also get the bed_file
         with open(input_bed, 'r') as bed_file:
             # Iterate over each bed file entry
+            next(bed_file)#skip the header
             for line in bed_file:
                 line_r = line.strip().split("\t")
                 chromosome= line_r[0]
                 interval_start= int(line_r[1])
                 interval_end= int(line_r[2])
-                inversion_id=line_r[3]
+                inv_length= interval_end-interval_start
+                inversion_id=chromosome+'-'+str(interval_start)+'-INV-'+str(inv_length)
                 # Fetch all bam entries that fall in this bin.
                 vcf_in = VariantFile(input_vcf)  # auto-detect input format
                 recs=[]
