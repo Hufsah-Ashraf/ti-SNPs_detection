@@ -23,17 +23,17 @@ states_link = opt$file
 counts_link = opt$bed
 outdir_raw = opt$outdir
 states<- read.table(states_link, header=T)
-#states<-states[(states$class=='CC'| states$class=='WW'),]
-setDT(states)
+#we only need CC and WW cells
+states <- states[(!is.na(states$class) & states$class %in% c("CC","WW")),]
 snp_counts<- read.table(counts_link, header=T)
-setDT(snp_counts)
 sample = str_match(states_link, "([HG|NA|GM]+[0-9]{3,5})")[,2]
 print(sample)
 # getting state info from 'final.txt' the same way mosaiCatcher does
 # Assign strand states to all chromosomes (ignoring the position, for now)
 snp_counts$cell<-as.character(lapply(snp_counts$cell,function(x){str_split_fixed(x,'.sort', n=Inf)[1]}))
+setDT(snp_counts)
 states$cell<-as.character(lapply(states$cell,function(x){str_split_fixed(x,'.sort', n=Inf)[1]}))
-
+setDT(states)
 results_list <- list()
 # Process chromosome by chromosome
 for (chr in unique(snp_counts$chrom)) {
@@ -41,21 +41,36 @@ for (chr in unique(snp_counts$chrom)) {
   # Subset snp_counts and states for this chromosome
   snp_chr <- snp_counts[chrom == chr]
   states_chr <- states[chrom == chr]
-  
+  setkey(states_chr, cell, chrom, start, end)
+  setkey(snp_chr, cell, chrom, inv_start, inv_end)
   # Perform join and filter
-  tmp <- states_chr[snp_chr, 
-                    on = .(cell, chrom),
-                    nomatch = 0,
-                    allow.cartesian = TRUE][
-                      inv_start >= start & inv_end <= end & class %in% c("CC","WW") & !is.na(class)
-                    ]
+  tmp <- foverlaps(
+    snp_chr,
+    states_chr,
+    by.x = c("cell","chrom","inv_start","inv_end"),
+    by.y = c("cell","chrom","start","end"),
+    type = "within",
+    nomatch = 0
+  )
+  if (nrow(tmp) == 0) next
+  # for WW cells, translate W-->forward and C-->inverted (and vice versa for CC)
+  tmp[, strand := fifelse(
+    (class == "CC" & orientation == "Crick") |
+      (class == "WW" & orientation == "Watson"),
+    "forward",
+    "inverted"
+  )]
+  #get consensus across cells
+  tmp_cons<-tmp %>% group_by(i.sample, chrom, inv_start, inv_end, inv_ID, snp_pos,ref_allele, alt_allele, seen_allele, strand, snp_AF) %>% 
+    summarize(count = sum(count), NumFrames = n())
   
-  results_list[[chr]] <- tmp
+  results_list[[chr]] <- tmp_cons
 }
 
 # Combine results
-snp_counts_filtered <- rbindlist(results_list)
-
+snp_counts_cons <- rbindlist(results_list)
+#get rid of data frames no longer needed
+rm(snp_counts,states,snp_counts_filtered,tmp,tmp_cons, snp_chr,states_chr)
 
 
 
@@ -63,16 +78,16 @@ snp_counts_filtered <- rbindlist(results_list)
 #snp_counts <- snp_counts[(snp_counts$inv_start >= snp_counts$start & snp_counts$inv_end <=snp_counts$end),]
 # filter out the entries where class is anything other than CC and WW (it includes removing the cells where the class entries are NA or '?')
 #snp_counts_filtered<-data.frame(snp_counts[!is.na(snp_counts$class) & (snp_counts$class=='CC'| snp_counts$class=='WW'),])
-# for WW cells, translate W-->forward and C-->inverted (and vice versa for CC)
-snp_counts_filtered$strand<-NA
-snp_counts_filtered$strand<-ifelse(((snp_counts_filtered$class=='CC'& snp_counts_filtered$orientation=='Crick')|
-                                      (snp_counts_filtered$class=='WW'& snp_counts_filtered$orientation=='Watson')),'forward','inverted')
+
+#snp_counts_filtered$strand<-NA
+#snp_counts_filtered$strand<-ifelse(((snp_counts_filtered$class=='CC'& snp_counts_filtered$orientation=='Crick')|
+#                                      (snp_counts_filtered$class=='WW'& snp_counts_filtered$orientation=='Watson')),'forward','inverted')
 
 
 
 #get consensus across cells
-snp_counts_cons<-snp_counts_filtered %>% group_by(i.sample, chrom, inv_start, inv_end, inv_ID, snp_pos,ref_allele, alt_allele, seen_allele, strand, snp_AF) %>% 
-  summarize(count = sum(count), NumFrames = n())
+#snp_counts_cons<-snp_counts_filtered %>% group_by(i.sample, chrom, inv_start, inv_end, inv_ID, snp_pos,ref_allele, alt_allele, seen_allele, strand, snp_AF) %>% 
+#  summarize(count = sum(count), NumFrames = n())
 sub<-data.frame(snp_counts_cons$i.sample,snp_counts_cons$chrom, snp_counts_cons$inv_start, snp_counts_cons$inv_end, snp_counts_cons$inv_ID,
                 snp_counts_cons$snp_pos, snp_counts_cons$ref_allele, snp_counts_cons$alt_allele, snp_counts_cons$snp_AF)
 #store each within inversion unique snp

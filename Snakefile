@@ -34,8 +34,8 @@ rule snp_strand_counts:
         strand_counts = output_folder+"counts/{sample}/snp_strand_counts.txt",
         other_info = output_folder+ "other/{sample}/read_info.txt"
     resources:
-    	runtime_hrs = 48 ,
-    	mem_total_mb = 3000
+    	runtime_hrs = 60 ,
+    	mem_total_mb = 10000
     shell:
         "python3 recurrence_first_v2.py -i {input.bam} -b {input.bed} -o {output.strand_counts} -v {input.vcf} -s {wildcards.sample} > {output.other_info} "
                
@@ -48,7 +48,7 @@ rule add_cell_states:
     	out = output_folder+'per_sample_configs/{sample}_snp_ref_inv.txt'
     resources:
     	runtime_hrs = 24,
-    	mem_total_mb = 90000
+    	mem_total_mb = 150000
     conda: "envs/r4.yaml"
     shell:
     	"""

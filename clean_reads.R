@@ -4,17 +4,32 @@
 #i.e. we accept 'forward' reads from a sample only if atleast one of its haplotypes is 'REF'.
 #Similarly,  we accept 'inverted' reads from a sample only if atleast one of its haplotypes is reported to be 'INV'
 #This code should be a part of 'cell_states_from_final.R' (TODO)
-library(dplyr)
-library(data.table)
-library(stringr)
+suppressMessages(library("optparse"))
+suppressMessages(library(tidyverse))
+suppressMessages(library(data.table))
+suppressMessages(library(dplyr))
+suppressMessages(library(stringr))
 
-files_link<-'per_sample_configs/'
+option_list = list( 
+  make_option(c("-f", "--file"), type="character", default=NULL, 
+              help="final.txt files produced by mosaicatcher", metavar="character"),
+  make_option(c("-b", "--bed"), type="character", default=NULL, 
+              help="output file snp_strand_counts from recuurence script", metavar="character"),
+  make_option(c("-g", "--gts"), type="character", default=NULL, 
+              help="genotypes from the regenotyper", metavar="character"),
+  make_option(c("-o", "--outdir"), type="character", default="./outputcorr/", 
+              help="output dir name [default= %default]", metavar="character")
+); 
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+files_link<-opt$file
+#files_link<-'per_sample_configs/'
 files <- list.files(files_link,pattern = "txt")
 for (i in 1:length(files)){
   files[i]<-paste0(files_link,files[i])
   
 }
-genotypes<-data.frame(fread('variants_freeze4inv_sv_inv_hg38_processed_arbigent_filtered_manualDotplot_filtered_PAVgenAdded_withInvCategs.tsv'))
+genotypes<-data.frame(fread(opt$gts))
 genotypes[,15:58]<- data.frame(lapply(genotypes[,15:58], function(x) { gsub("_lowconf", "", x)  }))
 genotypes[,15:58]<- data.frame(lapply(genotypes[,15:58], function(x) { gsub("noreads", "\\.\\|\\.", x)  }))
 genotypes[,15:58]<- data.frame(lapply(genotypes[,15:58], function(x) { gsub("2020", "0\\|0", x)  }))
@@ -55,6 +70,6 @@ for (f in (1:length(files))) {
                                       alt_inv = as.numeric(alt_inv),
                                       inv_ID = as.character(inv_ID))
   filename<-str_split_fixed(link, pattern = '/', n=Inf)[2]
-  write.table(config_file, paste0('per_sample_configs_clean/',filename), col.names = T, row.names = F, quote = F)
+  write.table(config_file, paste0(opt$outdir,filename), col.names = T, row.names = F, quote = F)
   
 }
